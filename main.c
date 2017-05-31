@@ -1,5 +1,5 @@
 /**
- * program: dadasigproc
+ * program: dadafilterbank
  *
  * Purpose: connect to a ring buffer and create Sigproc output per TAB on request
  * 
@@ -12,12 +12,15 @@
  * Licencse: Apache v2.0
  */
 
+#include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <getopt.h>
 
 #include "dada_hdu.h"
 #include "ascii_header.h"
+#include "filterbank.h"
 
 FILE *runlog = NULL;
 #define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout);}
@@ -121,7 +124,7 @@ dada_hdu_t *init_ringbuffer(char *key) {
  * Print commandline options
  */
 void printOptions() {
-  printf("usage: dadasigproc -k <hexadecimal key> -l <logfile>\n");
+  printf("usage: dadafilterbank -k <hexadecimal key> -l <logfile>\n");
   printf("e.g. dadafits -k dada -l log.txt\n");
   return;
 }
@@ -179,14 +182,37 @@ int main (int argc, char *argv[]) {
     free (logfile);
   }
 
-  LOG("dadasigproc version: " VERSION "\n");
+  LOG("dadafilterbank version: " VERSION "\n");
 
+  // connect to ring buffer
   dada_hdu_t *ringbuffer = init_ringbuffer(key);
   ipcbuf_t *data_block = (ipcbuf_t *) ringbuffer->data_block;
   ipcio_t *ipc = ringbuffer->data_block;
 
+  // open filterbank file
+  FILE *output = filterbank_create(
+    "mydata.fil",
+    1, // int telescope_id,
+    1, // int machine_id,
+    "testing", // char *source_name,
+    0.0, // double az_start,
+    1.0, // double za_start,
+    2.0, // double src_raj,
+    3.0, // double src_dej,
+    4.0, // double tstart,
+    5.0, // double tsamp,
+    8, // int nbits,
+    0.0, // double fch1,
+    0.1, // double foff,
+    1536, // int nchans,
+    12, // int nbeams,
+    1, // int ibeam,
+    1 // int nifs
+  );
+
   int quit = 0;
   uint64_t bufsz = ipc->curbufsz;
+  uint64_t full_bufs = 0;
 
   int page_count = 0;
   char *page = NULL;
@@ -199,18 +225,20 @@ int main (int argc, char *argv[]) {
       quit = 1;
     } else {
       // Wait for there to be 4 pages ahead of us
-      bool wait = true;
+      int wait = 1;
       while (wait) {
-        int written = ipcbuf_get_write_count(data_block);
-        int read = ipcbuf_get_read_count(data_block);
-        if (written - read < 4) {
-          LOG("Waiting");
-          wait = true;
-          sleep(1);
+        // TODO: should we add expclit reader id from data_block->iread
+        full_bufs = ipcbuf_get_nfull(data_block);
+        if (full_bufs < 4) {
+          wait = 1;
+          usleep(10000); // 10 miliseconds
         } else {
-          wait = false;
+          wait = 0;
         }
       }
+      // page is [NTABS][NCHANNELS][25088]
+      // filterbank format is [time, polarization, frequency]
+      fwrite(page, sizeof(char), 25000 * 1 * 1536, output); // SAMPLE * IF * NCHAN
       ipcbuf_mark_cleared((ipcbuf_t *) ipc);
       page_count++;
     }
@@ -223,4 +251,5 @@ int main (int argc, char *argv[]) {
   dada_hdu_unlock_read(ringbuffer);
   dada_hdu_disconnect(ringbuffer);
   LOG("Read %i pages\n", page_count);
+  filterbank_close(output);
 }
