@@ -4,7 +4,11 @@
  * Purpose: connect to a ring buffer and create Sigproc output per TAB on request
  * 
  *          A ringbuffer page is interpreted as an array of Stokes IQUV:
- *          TODO
+ *          [tab=NTABS (12)][time=NTIMES (25000)][the 4 components IQUV][1536 channels]
+ *
+ *          SC3: NTIMES (12500) per 1.024 seconds -> TSAMP 0.00008192
+ *          SC4: NTIMES (25000) per 1.024 seconds -> TSAMP 0.00004096
+ *          TODO: science case selection, now defaults to 4
  *
  *          Written for the AA-Alert project, ASTRON
  *
@@ -26,39 +30,17 @@ FILE *runlog = NULL;
 #define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout);}
 
 #define NTABS 12
-#define NCHANNELS 1536
 #define NTIMES 25000
+#define TSAMP 0.00004096
 
 #define CACHE_SIZE 10
 unsigned char *cache_pages[CACHE_SIZE];
 int cache_start, cache_end;
 
-unsigned char *get_page() {
-  unsigned char *page = NULL;
 
-  if (cache_start != cache_end) {
-    page = cache_pages[cache_start++];
-    if (cache_start == CACHE_SIZE) {
-      cache_start = 0;
-    }
-  }
-  return page;
-}
-
-int add_page(unsigned char *page) {
-  int cache_count = cache_end - cache_start;
-  if (cache_count < 0) {
-    cache_count += CACHE_SIZE;
-  } else if (cache_count == CACHE_SIZE) {
-    LOG("Cache full");
-    exit(EXIT_FAILURE);
-  }
-
-  cache_pages[cache_end++] = page;
-  if (cache_end == CACHE_SIZE) {
-    cache_end = 0;
-  }
-}
+unsigned int nchannels;
+float min_frequency;
+float channel_bandwidth;
 
 /**
  * Open a connection to the ringbuffer
@@ -102,12 +84,9 @@ dada_hdu_t *init_ringbuffer(char *key) {
   }
 
   // parse header
-  unsigned int uintValue;
-  float floatValue[2];
-  ascii_header_get(header, "SAMPLES_PER_BATCH", "%d", &uintValue);
-  ascii_header_get(header, "CHANNELS", "%d", &uintValue);
-  ascii_header_get(header, "MIN_FREQUENCY", "%f", &floatValue[0]);
-  ascii_header_get(header, "CHANNEL_BANDWIDTH", "%f", &floatValue[1]);
+  ascii_header_get(header, "CHANNELS", "%d", &nchannels);
+  ascii_header_get(header, "MIN_FREQUENCY", "%f", &min_frequency);
+  ascii_header_get(header, "CHANNEL_BANDWIDTH", "%f", &channel_bandwidth);
 
   // tell the ringbuffer the header has been read
   if (ipcbuf_mark_cleared(hdu->header_block) < 0) {
@@ -167,6 +146,7 @@ void parseOptions(int argc, char *argv[], char **key, char **logfile) {
 int main (int argc, char *argv[]) {
   char *key;
   char *logfile;
+  int tab; // tight array beam
 
   // parse commandline
   parseOptions(argc, argv, &key, &logfile);
@@ -190,25 +170,32 @@ int main (int argc, char *argv[]) {
   ipcio_t *ipc = ringbuffer->data_block;
 
   // open filterbank file
-  FILE *output = filterbank_create(
-    "mydata.fil",
-    1, // int telescope_id,
-    1, // int machine_id,
-    "testing", // char *source_name,
-    0.0, // double az_start,
-    1.0, // double za_start,
-    2.0, // double src_raj,
-    3.0, // double src_dej,
-    4.0, // double tstart,
-    5.0, // double tsamp,
-    8, // int nbits,
-    0.0, // double fch1,
-    0.1, // double foff,
-    1536, // int nchans,
-    12, // int nbeams,
-    1, // int ibeam,
-    1 // int nifs
-  );
+  FILE *output[NTABS];
+
+  for (tab=0; tab<NTABS; tab++) {
+    char fname[256];
+    snprintf(fname, 256, "mydata_%02i.fil", tab);
+
+    output[tab] = filterbank_create(
+      fname,     // filename
+      1,         // int telescope_id,
+      1,         // int machine_id,
+      "testing", // char *source_name,
+      0.0,       // double az_start,
+      1.0,       // double za_start,
+      2.0,       // double src_raj,
+      3.0,       // double src_dej,
+      0.0,       // double tstart,
+      TSAMP,     // double tsamp,
+      8,         // int nbits,
+      min_frequency,       // double fch1,
+      channel_bandwidth,   // double foff,
+      nchannels, // int nchans,
+      NTABS,     // int nbeams,
+      tab + 1,   // int ibeam, TODO: start at 1?
+      1          // int nifs
+    );
+  }
 
   int quit = 0;
   uint64_t bufsz = ipc->curbufsz;
@@ -218,8 +205,6 @@ int main (int argc, char *argv[]) {
   char *page = NULL;
 
   while(!quit && !ipcbuf_eod(data_block)) {
-    int tab; // tight array beam
-
     page = ipcbuf_get_next_read(data_block, &bufsz);
     if (! page) {
       quit = 1;
@@ -236,9 +221,11 @@ int main (int argc, char *argv[]) {
           wait = 0;
         }
       }
-      // page is [NTABS][NCHANNELS][25088]
+      // page is [tab=NTABS][time=NTIMES][the 4 components IQUV][1536 channels]
       // filterbank format is [time, polarization, frequency]
-      fwrite(page, sizeof(char), 25000 * 1 * 1536, output); // SAMPLE * IF * NCHAN
+      for (tab=0; tab<NTABS; tab++) {
+        fwrite(&page[tab*NTIMES*4*1536], sizeof(char), NTIMES * 1 * 1536, output[tab]); // SAMPLE * IF * NCHAN
+      }
       ipcbuf_mark_cleared((ipcbuf_t *) ipc);
       page_count++;
     }
@@ -251,5 +238,8 @@ int main (int argc, char *argv[]) {
   dada_hdu_unlock_read(ringbuffer);
   dada_hdu_disconnect(ringbuffer);
   LOG("Read %i pages\n", page_count);
-  filterbank_close(output);
+
+  for (tab=0; tab<NTABS; tab++) {
+    filterbank_close(output[tab]);
+  }
 }
