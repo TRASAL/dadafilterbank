@@ -4,11 +4,7 @@
  * Purpose: connect to a ring buffer and create Sigproc output per TAB on request
  * 
  *          A ringbuffer page is interpreted as an array of Stokes IQUV:
- *          [tab=NTABS (12)][time=NTIMES (25000)][the 4 components IQUV][1536 channels]
- *
- *          SC3: NTIMES (12500) per 1.024 seconds -> TSAMP 0.00008192
- *          SC4: NTIMES (25000) per 1.024 seconds -> TSAMP 0.00004096
- *          TODO: science case selection, now defaults to 4
+ *          [tab=NTABS (12)][time=(25000 or 12500)][the 4 components IQUV][1536 channels]
  *
  *          Written for the AA-Alert project, ASTRON
  *
@@ -30,17 +26,16 @@ FILE *runlog = NULL;
 #define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout);}
 
 #define NTABS 12
-#define NTIMES 25000
-#define TSAMP 0.00004096
 
 #define CACHE_SIZE 10
 unsigned char *cache_pages[CACHE_SIZE];
 int cache_start, cache_end;
 
-
 unsigned int nchannels;
 float min_frequency;
 float channel_bandwidth;
+float tsamp;
+int ntimes;
 
 /**
  * Open a connection to the ringbuffer
@@ -103,7 +98,7 @@ dada_hdu_t *init_ringbuffer(char *key) {
  * Print commandline options
  */
 void printOptions() {
-  printf("usage: dadafilterbank -k <hexadecimal key> -l <logfile>\n");
+  printf("usage: dadafilterbank -c <science case> -k <hexadecimal key> -l <logfile>\n");
   printf("e.g. dadafits -k dada -l log.txt\n");
   return;
 }
@@ -111,11 +106,11 @@ void printOptions() {
 /**
  * Parse commandline
  */
-void parseOptions(int argc, char *argv[], char **key, char **logfile) {
+void parseOptions(int argc, char *argv[], char **key, int *science_case, char **logfile) {
   int c;
 
-  int setk=0, setl=0;
-  while((c=getopt(argc,argv,"k:l:"))!=-1) {
+  int setk=0, setl=0, setc=0;
+  while((c=getopt(argc,argv,"c:k:l:"))!=-1) {
     switch(c) {
       // -k <hexadecimal_key>
       case('k'):
@@ -129,6 +124,16 @@ void parseOptions(int argc, char *argv[], char **key, char **logfile) {
         setl=1;
         break;
 
+      // -c <science case>
+      case('c'):
+        setc=1;
+        *science_case = atoi(optarg);
+        if (*science_case < 3 || *science_case > 4) {
+          printOptions();
+          exit(0);
+        }
+        break;
+
       default:
         printOptions();
         exit(0);
@@ -136,7 +141,7 @@ void parseOptions(int argc, char *argv[], char **key, char **logfile) {
   }
 
   // All arguments are required
-  if (!setk || !setl) {
+  if (!setk || !setl || !setc) {
     printOptions();
     exit(EXIT_FAILURE);
   }
@@ -146,10 +151,11 @@ void parseOptions(int argc, char *argv[], char **key, char **logfile) {
 int main (int argc, char *argv[]) {
   char *key;
   char *logfile;
+  int science_case;
   int tab; // tight array beam
 
   // parse commandline
-  parseOptions(argc, argv, &key, &logfile);
+  parseOptions(argc, argv, &key, &science_case, &logfile);
 
   // set up logging
   if (logfile) {
@@ -163,6 +169,18 @@ int main (int argc, char *argv[]) {
   }
 
   LOG("dadafilterbank version: " VERSION "\n");
+
+  if (science_case == 3) {
+    // NTIMES (12500) per 1.024 seconds -> 0.00008192 [s]
+    tsamp = 0.00008192;
+    ntimes = 12500;
+  } else if (science_case == 4) {
+    // NTIMES (25000) per 1.024 seconds -> 0.00004096 [s]
+    tsamp = 0.00004096;
+    ntimes = 25000;
+  }
+  LOG("Science case = ", science_case);
+  LOG("Sampling time [s] =", tsamp);
 
   // connect to ring buffer
   dada_hdu_t *ringbuffer = init_ringbuffer(key);
@@ -186,7 +204,7 @@ int main (int argc, char *argv[]) {
       2.0,       // double src_raj,
       3.0,       // double src_dej,
       0.0,       // double tstart,
-      TSAMP,     // double tsamp,
+      tsamp,     // double tsamp,
       8,         // int nbits,
       min_frequency,       // double fch1,
       channel_bandwidth,   // double foff,
@@ -221,10 +239,10 @@ int main (int argc, char *argv[]) {
           wait = 0;
         }
       }
-      // page is [tab=NTABS][time=NTIMES][the 4 components IQUV][1536 channels]
+      // page is [tab=NTABS][time=ntimes][the 4 components IQUV][1536 channels]
       // filterbank format is [time, polarization, frequency]
       for (tab=0; tab<NTABS; tab++) {
-        fwrite(&page[tab*NTIMES*4*1536], sizeof(char), NTIMES * 1 * 1536, output[tab]); // SAMPLE * IF * NCHAN
+        fwrite(&page[tab*ntimes*4*1536], sizeof(char), ntimes * 1 * 1536, output[tab]); // SAMPLE * IF * NCHAN
       }
       ipcbuf_mark_cleared((ipcbuf_t *) ipc);
       page_count++;
