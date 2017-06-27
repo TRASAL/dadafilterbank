@@ -38,7 +38,7 @@
 #include "ascii_header.h"
 #include "filterbank.h"
 
-#define SOCKBUFSIZE 256000        // Buffer size of socket
+#define SOCKBUFSIZE 16384 // Buffer size of socket 16kB
 
 FILE *runlog = NULL;
 #define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout);}
