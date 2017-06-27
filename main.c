@@ -44,6 +44,7 @@ FILE *runlog = NULL;
 #define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout);}
 
 #define NTABS 12
+FILE *output[NTABS]
 
 #define CACHE_SIZE 10
 unsigned char *cache_pages[CACHE_SIZE];
@@ -171,9 +172,8 @@ void parseOptions(int argc, char *argv[], char **key, int *science_case, char **
   }
 }
 
-void write_page(char *page) {
+void open_files() {
   int tab; // tight array beam
-  FILE *output[NTABS];
 
   for (tab=0; tab<NTABS; tab++) {
     char fname[256];
@@ -200,16 +200,23 @@ void write_page(char *page) {
       4          // int nifs
     );
   }
+}
 
+void close_files() {
+  int tab; // tight array beam
+
+  for (tab=0; tab<NTABS; tab++) {
+    filterbank_close(output[tab]);
+  }
+}
+
+void write_page(char *page) {
   // page is [tab=NTABS][time=ntimes][the 4 components IQUV][1536 channels]
   // filterbank format is [time, polarization, frequency]
   for (tab=0; tab<NTABS; tab++) {
     fwrite(&page[tab*ntimes*4*1536], sizeof(char), 1 * ntimes * 4 * 1536, output[tab]); // SAMPLE * IF * NCHAN
   }
 
-  for (tab=0; tab<NTABS; tab++) {
-    filterbank_close(output[tab]);
-  }
 }
 
 int unix_domain_socket (char *socket_path) {
@@ -296,14 +303,16 @@ int main (int argc, char *argv[]) {
   p.events = POLLIN;
   p.revents = 0;
 
+  // to deal with triggers
+  int tab; // tight array beam
+  int to_write = 0; // pages left to write
+
   // get the first page
   page = ipcbuf_get_next_read(data_block, &bufsz);
   if (! page) {
     LOG("ERROR ipcbuf_get_next_read failed");
     exit(EXIT_FAILURE);
   }
-
-  // setup file descriptor set for listening
 
   while(1) {
     p.revents = 0;
@@ -314,24 +323,47 @@ int main (int argc, char *argv[]) {
       LOG("ERROR poll failed: %s\n", strerror(errno));
       exit(EXIT_FAILURE);
     }
-    else if (rc == 0) {
-      // select timed out
-      // TODO: should we do anything special here?
-    }
+    // else if (rc == 0) {
+    //   // select timed out
+    // }
     else if (rc > 0) {
       // we received something
-      LOG("New connection %i\n", p.revents);
       read(trigger_fd, message, 254);
       LOG("Received trigger: '%s'\n", message);
-      write_page(page);
+      if (to_write == 0) {
+        // we were not writing, open files, and prepare to write 8 samples to disk
+        to_write = 8;
+        open_files(output);
+      } else if (to_write > 0) {
+        // we were writing to disk, but another trigger happened
+        // reset the write count to 8 again
+        to_write = 0;
+      }
     }
 
     full_bufs = ipcbuf_get_nfull(data_block);
     if (full_bufs >= 4) {
       // The delay has reached sufficient length,
-      // process the next page to preven the ringbuffer from overflowing
-      ipcbuf_mark_cleared((ipcbuf_t *) ipc);
+      // process the next page to prevent the ringbuffer from overflowing
 
+      // Check if this page needs to be saved
+      if (to_write > 0) {
+        // write this page to disk, and decrease write counter
+        to_write--;
+
+        for (tab=0; tab<NTABS; tab++) {
+          // SAMPLE * IF * NCHAN
+          fwrite(&page[tab*ntimes*4*1536], sizeof(char), 1 * ntimes * 4 * 1536, output[tab]);
+        }
+
+        if (to_write == 0) {
+          // done writing
+          close_files();
+        }
+      }
+
+      // proceed to next page
+      ipcbuf_mark_cleared((ipcbuf_t *) ipc);
       page = ipcbuf_get_next_read(data_block, &bufsz);
       if (! page) {
         LOG("ERROR ipcbuf_get_next_read failed");
