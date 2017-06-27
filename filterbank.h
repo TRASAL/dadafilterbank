@@ -3,9 +3,9 @@
 
 #include <stdio.h>
 
-extern void filterbank_close(FILE *file);
+extern void filterbank_close(int fd);
 
-extern FILE *filterbank_create(
+extern int filterbank_create(
     char *file_name,
     int telescope_id,
     int machine_id,

@@ -23,7 +23,8 @@
  *
  * TODO: smarter dumping. Now, whenever a signal is received, we dump 1 page and overwrite existing data
  */
-
+#define _GNU_SOURCE
+#include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,7 +45,7 @@ FILE *runlog = NULL;
 #define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout);}
 
 #define NTABS 12
-FILE *output[NTABS]
+int output[NTABS];
 
 #define CACHE_SIZE 10
 unsigned char *cache_pages[CACHE_SIZE];
@@ -117,7 +118,7 @@ dada_hdu_t *init_ringbuffer(char *key) {
  * Print commandline options
  */
 void printOptions() {
-  printf("usage: dadafilterbank -c <science case> -k <hexadecimal key> -l <logfile> -s <trigger socket>\n");
+  printf("usage: dadafilterbank -c <science case> -k <hexadecimal key> -l <logfile> -s <start packet number> -t <trigger socket> -n <filename prefix for dumps>\n");
   printf("e.g. dadafits -k dada -l log.txt\n");
   return;
 }
@@ -125,11 +126,11 @@ void printOptions() {
 /**
  * Parse commandline
  */
-void parseOptions(int argc, char *argv[], char **key, int *science_case, char **trigger_socket, char **logfile) {
+void parseOptions(int argc, char *argv[],
+    char **key, int *science_case, unsigned long *startpacket, char **trigger_socket, char **prefix, char **logfile) {
   int c;
-
-  int setk=0, setl=0, setc=0, sets=0;
-  while((c=getopt(argc,argv,"c:k:l:s:"))!=-1) {
+  int setk=0, setl=0, setc=0, sets=0, sett=0, setn=0;
+  while((c=getopt(argc,argv,"c:k:l:s:t:n:"))!=-1) {
     switch(c) {
       // -k <hexadecimal_key>
       case('k'):
@@ -153,10 +154,22 @@ void parseOptions(int argc, char *argv[], char **key, int *science_case, char **
         }
         break;
 
-      // -s <trigger socket>
-      case('s'):
-        sets=1;
+      // -t <trigger socket>
+      case('t'):
+        sett=1;
         *trigger_socket = strdup(optarg);
+        break;
+
+      // -s start packet number
+      case('s'):
+        *startpacket = atol(optarg);
+        sets=1;
+        break;
+
+      // -n <trigger socket>
+      case('n'):
+        setn=1;
+        *prefix = strdup(optarg);
         break;
 
       default:
@@ -166,18 +179,21 @@ void parseOptions(int argc, char *argv[], char **key, int *science_case, char **
   }
 
   // All arguments are required
-  if (!setk || !setl || !setc || !sets) {
+  if (!setk || !setl || !setc || !sets || !sett || !setn) {
     printOptions();
     exit(EXIT_FAILURE);
   }
 }
 
-void open_files() {
+void open_files(char *prefix, int page_count) {
   int tab; // tight array beam
 
+  // 1 page => 1024 microseconds
+  // startpacket is in units of 1.28 us since UNIX epoch
+  //
   for (tab=0; tab<NTABS; tab++) {
     char fname[256];
-    snprintf(fname, 256, "mydata_%02i.fil", tab + 1);
+    snprintf(fname, 256, "%s_%06i_%02i.fil", prefix, page_count, tab + 1);
 
     // open filterbank file
     output[tab] = filterbank_create(
@@ -189,7 +205,7 @@ void open_files() {
       1.0,       // double za_start,
       2.0,       // double src_raj,
       3.0,       // double src_dej,
-      0.0,       // double tstart,
+      0.0,       // double tstart, TODO
       tsamp,     // double tsamp,
       8,         // int nbits,
       min_frequency,          // double fch1,
@@ -199,6 +215,12 @@ void open_files() {
       tab + 1,   // int ibeam, TODO: start at 1?
       4          // int nifs
     );
+
+    // Allocate for 8 pages IQUV for 1 TAB
+    // https://blog.plenz.com/2014-04/so-you-want-to-write-to-a-file-real-fast.html
+    if(fallocate(output[tab], 0, 0, 1228800391) == -1 && errno == EOPNOTSUPP) {
+      ftruncate(output[tab], 1228800391);
+    }
   }
 }
 
@@ -208,15 +230,6 @@ void close_files() {
   for (tab=0; tab<NTABS; tab++) {
     filterbank_close(output[tab]);
   }
-}
-
-void write_page(char *page) {
-  // page is [tab=NTABS][time=ntimes][the 4 components IQUV][1536 channels]
-  // filterbank format is [time, polarization, frequency]
-  for (tab=0; tab<NTABS; tab++) {
-    fwrite(&page[tab*ntimes*4*1536], sizeof(char), 1 * ntimes * 4 * 1536, output[tab]); // SAMPLE * IF * NCHAN
-  }
-
 }
 
 int unix_domain_socket (char *socket_path) {
@@ -246,10 +259,12 @@ int main (int argc, char *argv[]) {
   char *key;
   char *logfile;
   int science_case;
+  unsigned long startpacket;
   char *trigger_socket;
+  char *dump_prefix;
 
   // parse commandline
-  parseOptions(argc, argv, &key, &science_case, &trigger_socket, &logfile);
+  parseOptions(argc, argv, &key, &science_case, &startpacket, &trigger_socket, &dump_prefix, &logfile);
 
   // set up logging
   if (logfile) {
@@ -276,6 +291,7 @@ int main (int argc, char *argv[]) {
   LOG("Science case = %i\n", science_case);
   LOG("Sampling time [s] = %f\n", tsamp);
   LOG("Trigger socket = %s\n", trigger_socket);
+  LOG("Dump prefix = %s\n", dump_prefix);
 
   // connect to ring buffer
   dada_hdu_t *ringbuffer = init_ringbuffer(key);
@@ -306,6 +322,7 @@ int main (int argc, char *argv[]) {
   // to deal with triggers
   int tab; // tight array beam
   int to_write = 0; // pages left to write
+  int read_count;
 
   // get the first page
   page = ipcbuf_get_next_read(data_block, &bufsz);
@@ -333,7 +350,7 @@ int main (int argc, char *argv[]) {
       if (to_write == 0) {
         // we were not writing, open files, and prepare to write 8 samples to disk
         to_write = 8;
-        open_files(output);
+        open_files(dump_prefix, page_count);
       } else if (to_write > 0) {
         // we were writing to disk, but another trigger happened
         // reset the write count to 8 again
@@ -353,7 +370,8 @@ int main (int argc, char *argv[]) {
 
         for (tab=0; tab<NTABS; tab++) {
           // SAMPLE * IF * NCHAN
-          fwrite(&page[tab*ntimes*4*1536], sizeof(char), 1 * ntimes * 4 * 1536, output[tab]);
+          write(output[tab], &page[tab*ntimes*4*1536], sizeof(char) * 1 * ntimes * 4 * 1536);
+          // see here: http://lkml.iu.edu/hypermail/linux/kernel/1005.2/01845.html
         }
 
         if (to_write == 0) {
@@ -370,7 +388,6 @@ int main (int argc, char *argv[]) {
         exit(EXIT_FAILURE);
       }
       page_count++;
-      LOG("Page count is now %i\n", page_count);
     }
     // TODO: process remaining pages after a 'quit' has been triggered
   }

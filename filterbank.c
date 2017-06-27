@@ -28,36 +28,39 @@
  *
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <string.h>
-#include <stdio.h>
 #include "filterbank.h"
 
-static void put_raw_string(FILE *file, char *string) {
+static void put_raw_string(int fd, char *string) {
   int len = strlen(string);
-  fwrite(&len, sizeof(int), 1, file);
-  fwrite(string, sizeof(char), len, file);
+  write(fd, &len, sizeof(int));
+  write(fd, string, sizeof(char) * len);
 }
 
-static void put_string(FILE *file, char *name, char *value) {
-  put_raw_string(file, name);
-  put_raw_string(file, value);
+static void put_string(int fd, char *name, char *value) {
+  put_raw_string(fd, name);
+  put_raw_string(fd, value);
 }
 
-static void put_double(FILE *file, char *name, double value) {
-  put_raw_string(file, name);
-  fwrite(&value, sizeof(double), 1, file);
+static void put_double(int fd, char *name, double value) {
+  put_raw_string(fd, name);
+  write(fd, &value, sizeof(double));
 }
 
-static void put_int(FILE *file, char *name, int value) {
-  put_raw_string(file, name);
-  fwrite(&value, sizeof(int), 1, file);
+static void put_int(int fd, char *name, int value) {
+  put_raw_string(fd, name);
+  write(fd, &value, sizeof(int));
 }
 
-void filterbank_close(FILE *file) {
-  fclose(file);
+void filterbank_close(int fd) {
+  close(fd);
 }
 
-FILE *filterbank_create(
+int filterbank_create(
     char *file_name,
     int telescope_id,
     int machine_id,
@@ -75,30 +78,30 @@ FILE *filterbank_create(
     int nbeams,
     int ibeam,
     int nifs) {
-  FILE *out = fopen(file_name, "w");
+  int fd = open(file_name, O_WRONLY|O_CREAT, S_IRWXU);
 
-  put_raw_string(out, "HEADER_START");
-  put_int(out, "telescope_id", telescope_id);
-  put_int(out, "machine_id", machine_id);
-  put_int(out, "data_type", 1); // 1: filterbank data, 2: time series dada, DM=0
-  put_string(out, "rawdatafile", file_name);
-  put_string(out, "source_name", source_name);
-  put_int(out, "barycentric", 0); // 0: no, 1: yes
-  put_int(out, "pulsarcentric", 0); // 0: no, 1: yes
-  put_double(out, "az_start", az_start);
-  put_double(out, "za_start", za_start);
-  put_double(out, "src_raj", src_raj);
-  put_double(out, "src_dej", src_dej);
-  put_double(out, "tstart", tstart);
-  put_double(out, "tsamp", tsamp);
-  put_int(out, "nbits", nbits);
-  put_double(out, "fch1", fch1);
-  put_double(out, "foff", foff);
-  put_int(out, "nchans", nchans);
-  put_int(out, "nbeams", nbeams); // NOT DOCUMENTED BUT IN USE IN THE SIGPROC CODE
-  put_int(out, "ibeam", ibeam); // NOT DOCUMENTED BUT IN USE IN THE SIGPROC CODE
-  put_int(out, "nifs", nifs);
-  put_raw_string(out, "HEADER_END");
+  put_raw_string(fd, "HEADER_START");
+  put_int(fd, "telescope_id", telescope_id);
+  put_int(fd, "machine_id", machine_id);
+  put_int(fd, "data_type", 1); // 1: filterbank data, 2: time series dada, DM=0
+  put_string(fd, "rawdatafile", file_name);
+  put_string(fd, "source_name", source_name);
+  put_int(fd, "barycentric", 0); // 0: no, 1: yes
+  put_int(fd, "pulsarcentric", 0); // 0: no, 1: yes
+  put_double(fd, "az_start", az_start);
+  put_double(fd, "za_start", za_start);
+  put_double(fd, "src_raj", src_raj);
+  put_double(fd, "src_dej", src_dej);
+  put_double(fd, "tstart", tstart);
+  put_double(fd, "tsamp", tsamp);
+  put_int(fd, "nbits", nbits);
+  put_double(fd, "fch1", fch1);
+  put_double(fd, "foff", foff);
+  put_int(fd, "nchans", nchans);
+  put_int(fd, "nbeams", nbeams); // NOT DOCUMENTED BUT IN USE IN THE SIGPROC CODE
+  put_int(fd, "ibeam", ibeam); // NOT DOCUMENTED BUT IN USE IN THE SIGPROC CODE
+  put_int(fd, "nifs", nifs);
+  put_raw_string(fd, "HEADER_END");
 
-  return out;
+  return fd;
 }
