@@ -265,12 +265,21 @@ int main (int argc, char *argv[]) {
     tsamp = 0.00004096;
     ntimes = 25000;
   }
-  ntabs = 12; // TODO: depends on science_mode?
 
   LOG("dadafilterbank version: " VERSION "\n");
   LOG("Science case = %i\n", science_case);
   LOG("Sampling time [s] = %f\n", tsamp);
   LOG("Filename prefix = %s\n", file_prefix);
+
+  if (science_mode == 0) {
+    // IAB
+    ntabs = 1;
+    LOG("Science mode: IAB\n");
+  } else if (science_mode == 1) {
+    // TAB
+    ntabs = 12;
+    LOG("Science mode: TAB\n");
+  }
 
   // create filterbank files, and close files on C-c
   open_files(file_prefix);
