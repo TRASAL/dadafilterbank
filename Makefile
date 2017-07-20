@@ -1,10 +1,10 @@
 SOURCE_ROOT ?= $(HOME)
-BIN_DIR := $(SOURCE_ROOT)/install/bin
+BIN_DIR ?= $(SOURCE_ROOT)/install/bin
 
 VERSION := $(shell git rev-parse HEAD )
 
 # http://psrdada.sourceforge.net/
-PSRDADA  := $(SOURCE_ROOT)/src/psrdada
+PSRDADA  ?= $(SOURCE_ROOT)/src/psrdada
 
 OPTIMIZATION := -Ofast -march=native
 
