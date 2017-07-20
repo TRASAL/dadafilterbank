@@ -281,14 +281,15 @@ int main (int argc, char *argv[]) {
     LOG("Science mode: TAB\n");
   }
 
-  // create filterbank files, and close files on C-c
-  open_files(file_prefix);
-  signal(SIGINT, sigint_handler);
 
   // connect to ring buffer
   dada_hdu_t *ringbuffer = init_ringbuffer(key);
   ipcbuf_t *data_block = (ipcbuf_t *) ringbuffer->data_block;
   ipcio_t *ipc = ringbuffer->data_block;
+
+  // create filterbank files, and close files on C-c
+  open_files(file_prefix);
+  signal(SIGINT, sigint_handler);
 
   // for interaction with ringbuffer
   uint64_t bufsz = ipc->curbufsz;
