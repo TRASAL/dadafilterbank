@@ -324,9 +324,8 @@ int main (int argc, char *argv[]) {
       for (tab = 0; tab < ntabs; tab++) {
         for (channel = 0; channel < NCHANNELS; channel++) {
           for (time = 0; time < ntimes; time++) {
-            //buffer[time*NCHANNELS+channel] = page[(tab*NCHANNELS + channel) * padded_size + time];
-            // LCO: reverse freq order to comply with header
-            buffer[time*NCHANNELS+NCHANNELS-channel] = page[(tab*NCHANNELS + channel) * padded_size + time];
+            // reverse freq order to comply with header
+            buffer[time*NCHANNELS+NCHANNELS-channel-1] = page[(tab*NCHANNELS + channel) * padded_size + time];
           }
         }
         write(output[tab], buffer, sizeof(char) * ntimes * NCHANNELS);
