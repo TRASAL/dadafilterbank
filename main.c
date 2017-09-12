@@ -62,7 +62,7 @@ dada_hdu_t *init_ringbuffer(char *key) {
   key_t shmkey;
   sscanf(key, "%x", &shmkey);
   dada_hdu_set_key(hdu, shmkey);
-  LOG("dadafits SHMKEY: %s\n", key);
+  LOG("dadafilterbank SHMKEY: %s\n", key);
 
   // connect
   if (dada_hdu_connect (hdu) < 0) {
@@ -324,7 +324,9 @@ int main (int argc, char *argv[]) {
       for (tab = 0; tab < ntabs; tab++) {
         for (channel = 0; channel < NCHANNELS; channel++) {
           for (time = 0; time < ntimes; time++) {
-            buffer[time*NCHANNELS+channel] = page[(tab*NCHANNELS + channel) * padded_size + time];
+            //buffer[time*NCHANNELS+channel] = page[(tab*NCHANNELS + channel) * padded_size + time];
+            // LCO: reverse freq order to comply with header
+            buffer[time*NCHANNELS+NCHANNELS-channel] = page[(tab*NCHANNELS + channel) * padded_size + time];
           }
         }
         write(output[tab], buffer, sizeof(char) * ntimes * NCHANNELS);
