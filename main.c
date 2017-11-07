@@ -37,6 +37,7 @@ float channel_bandwidth;
 float tsamp;
 float ra;
 float dec;
+char source_name[256];
 float az_start;
 float za_start;
 float mjd_start;
@@ -93,6 +94,7 @@ dada_hdu_t *init_ringbuffer(char *key) {
   ascii_header_get(header, "TSAMP", "%f", &tsamp);
   ascii_header_get(header, "RA", "%f", &ra);
   ascii_header_get(header, "DEC", "%f", &dec);
+  ascii_header_get(header, "SOURCE", "%s", source_name);
   ascii_header_get(header, "AZ_START", "%f", &az_start);
   ascii_header_get(header, "ZA_START", "%f", &za_start);
   ascii_header_get(header, "MJD_START", "%f", &mjd_start);
@@ -210,7 +212,7 @@ void open_files(char *prefix, int ntabs) {
       fname,     // filename
       10,        // int telescope_id,
       15,        // int machine_id,
-      "TODO",    // char *source_name,
+      source_name, // char *source_name,
       az_start,       // double az_start,
       za_start,       // double za_start,
       ra,       // double src_raj,
