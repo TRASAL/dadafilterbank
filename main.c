@@ -191,15 +191,19 @@ void parseOptions(int argc, char *argv[],
   }
 }
 
-void open_files(char *prefix) {
-  int tab; // tight array beam
-
+void open_files(char *prefix, int ntabs) {
   // 1 page => 1024 microseconds
   // startpacket is in units of 1.28 us since UNIX epoch
-  //
+
+  int tab;
   for (tab=0; tab<ntabs; tab++) {
     char fname[256];
-    snprintf(fname, 256, "%s_%02i.fil", prefix, tab + 1);
+    if (ntabs == 1) {
+      snprintf(fname, 256, "%s.fil", prefix);
+    }
+    else {
+      snprintf(fname, 256, "%s_%02i.fil", prefix, tab + 1);
+    }
 
     // open filterbank file
     output[tab] = filterbank_create(
@@ -211,14 +215,14 @@ void open_files(char *prefix) {
       za_start,       // double za_start,
       ra,       // double src_raj,
       dec,       // double src_dej,
-      mjd_start,       // double tstart, TODO
+      mjd_start,       // double tstart
       tsamp,     // double tsamp,
       nbit,         // int nbits,
       min_frequency + bandwidth,  // double fch1,
       -1 * channel_bandwidth, // double foff,
       nchannels, // int nchans,
       ntabs,     // int nbeams,
-      tab + 1,   // int ibeam, TODO: start at 1?
+      tab + 1,   // int ibeam
       1          // int nifs
     );
   }
@@ -300,7 +304,7 @@ int main (int argc, char *argv[]) {
   ipcio_t *ipc = ringbuffer->data_block;
 
   // create filterbank files, and close files on C-c
-  open_files(file_prefix);
+  open_files(file_prefix, ntabs);
   signal(SIGINT, sigint_handler);
 
   // for interaction with ringbuffer
