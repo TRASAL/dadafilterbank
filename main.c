@@ -37,6 +37,7 @@ float channel_bandwidth;
 float tsamp;
 float ra;
 float dec;
+char source_name[256];
 float az_start;
 float za_start;
 float mjd_start;
@@ -93,6 +94,7 @@ dada_hdu_t *init_ringbuffer(char *key) {
   ascii_header_get(header, "TSAMP", "%f", &tsamp);
   ascii_header_get(header, "RA", "%f", &ra);
   ascii_header_get(header, "DEC", "%f", &dec);
+  ascii_header_get(header, "SOURCE", "%s", source_name);
   ascii_header_get(header, "AZ_START", "%f", &az_start);
   ascii_header_get(header, "ZA_START", "%f", &za_start);
   ascii_header_get(header, "MJD_START", "%f", &mjd_start);
@@ -191,34 +193,38 @@ void parseOptions(int argc, char *argv[],
   }
 }
 
-void open_files(char *prefix) {
-  int tab; // tight array beam
-
+void open_files(char *prefix, int ntabs) {
   // 1 page => 1024 microseconds
   // startpacket is in units of 1.28 us since UNIX epoch
-  //
+
+  int tab;
   for (tab=0; tab<ntabs; tab++) {
     char fname[256];
-    snprintf(fname, 256, "%s_%02i.fil", prefix, tab + 1);
+    if (ntabs == 1) {
+      snprintf(fname, 256, "%s.fil", prefix);
+    }
+    else {
+      snprintf(fname, 256, "%s_%02i.fil", prefix, tab + 1);
+    }
 
     // open filterbank file
     output[tab] = filterbank_create(
       fname,     // filename
       10,        // int telescope_id,
       15,        // int machine_id,
-      "TODO",    // char *source_name,
+      source_name, // char *source_name,
       az_start,       // double az_start,
       za_start,       // double za_start,
       ra,       // double src_raj,
       dec,       // double src_dej,
-      mjd_start,       // double tstart, TODO
+      mjd_start,       // double tstart
       tsamp,     // double tsamp,
       nbit,         // int nbits,
       min_frequency + bandwidth,  // double fch1,
       -1 * channel_bandwidth, // double foff,
       nchannels, // int nchans,
       ntabs,     // int nbeams,
-      tab + 1,   // int ibeam, TODO: start at 1?
+      tab + 1,   // int ibeam
       1          // int nifs
     );
   }
@@ -300,7 +306,7 @@ int main (int argc, char *argv[]) {
   ipcio_t *ipc = ringbuffer->data_block;
 
   // create filterbank files, and close files on C-c
-  open_files(file_prefix);
+  open_files(file_prefix, ntabs);
   signal(SIGINT, sigint_handler);
 
   // for interaction with ringbuffer
