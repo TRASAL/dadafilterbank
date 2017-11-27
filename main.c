@@ -31,16 +31,16 @@ FILE *runlog = NULL;
 int output[MAXTABS];
 
 unsigned int nchannels;
-float min_frequency;
-float bandwidth;
-float channel_bandwidth;
-float tsamp;
-float ra;
-float dec;
+double min_frequency;
+double bandwidth;
+double channel_bandwidth;
+double tsamp;
+double ra;
+double dec;
 char source_name[256];
-float az_start;
-float za_start;
-float mjd_start;
+double az_start;
+double za_start;
+double mjd_start;
 unsigned int nbit;
 int ntimes;
 int ntabs;
@@ -88,16 +88,16 @@ dada_hdu_t *init_ringbuffer(char *key) {
 
   // parse header
   ascii_header_get(header, "NCHAN", "%d", &nchannels);
-  ascii_header_get(header, "MIN_FREQUENCY", "%f", &min_frequency);
-  ascii_header_get(header, "CHANNEL_BANDWIDTH", "%f", &channel_bandwidth);
-  ascii_header_get(header, "BW", "%f", &bandwidth);
-  ascii_header_get(header, "TSAMP", "%f", &tsamp);
-  ascii_header_get(header, "RA", "%f", &ra);
-  ascii_header_get(header, "DEC", "%f", &dec);
+  ascii_header_get(header, "MIN_FREQUENCY", "%lf", &min_frequency);
+  ascii_header_get(header, "CHANNEL_BANDWIDTH", "%lf", &channel_bandwidth);
+  ascii_header_get(header, "BW", "%lf", &bandwidth);
+  ascii_header_get(header, "TSAMP", "%lf", &tsamp);
+  ascii_header_get(header, "RA", "%lf", &ra);
+  ascii_header_get(header, "DEC", "%lf", &dec);
   ascii_header_get(header, "SOURCE", "%s", source_name);
-  ascii_header_get(header, "AZ_START", "%f", &az_start);
-  ascii_header_get(header, "ZA_START", "%f", &za_start);
-  ascii_header_get(header, "MJD_START", "%f", &mjd_start);
+  ascii_header_get(header, "AZ_START", "%lf", &az_start);
+  ascii_header_get(header, "ZA_START", "%lf", &za_start);
+  ascii_header_get(header, "MJD_START", "%lf", &mjd_start);
   ascii_header_get(header, "NBIT", "%d", &nbit);
 
   // tell the ringbuffer the header has been read
