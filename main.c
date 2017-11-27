@@ -220,7 +220,7 @@ void open_files(char *prefix, int ntabs) {
       mjd_start,       // double tstart
       tsamp,     // double tsamp,
       nbit,         // int nbits,
-      min_frequency + bandwidth,  // double fch1,
+      min_frequency + bandwidth - .5 * channel_bandwidth,  // double fch1,
       -1 * channel_bandwidth, // double foff,
       nchannels, // int nchans,
       ntabs,     // int nbeams,
