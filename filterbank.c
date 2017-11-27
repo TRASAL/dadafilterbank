@@ -78,7 +78,7 @@ int filterbank_create(
     int nbeams,
     int ibeam,
     int nifs) {
-  int fd = open(file_name, O_WRONLY|O_CREAT, S_IRWXU);
+  int fd = open(file_name, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 
   put_raw_string(fd, "HEADER_START");
   put_int(fd, "telescope_id", telescope_id);
