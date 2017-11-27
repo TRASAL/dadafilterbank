@@ -32,8 +32,15 @@ int output[MAXTABS];
 
 unsigned int nchannels;
 float min_frequency;
+float bandwidth;
 float channel_bandwidth;
 float tsamp;
+float ra;
+float dec;
+float az_start;
+float za_start;
+float mjd_start;
+unsigned int nbit;
 int ntimes;
 int ntabs;
 
@@ -79,9 +86,17 @@ dada_hdu_t *init_ringbuffer(char *key) {
   }
 
   // parse header
-  ascii_header_get(header, "CHANNELS", "%d", &nchannels);
+  ascii_header_get(header, "NCHAN", "%d", &nchannels);
   ascii_header_get(header, "MIN_FREQUENCY", "%f", &min_frequency);
   ascii_header_get(header, "CHANNEL_BANDWIDTH", "%f", &channel_bandwidth);
+  ascii_header_get(header, "BW", "%f", &bandwidth);
+  ascii_header_get(header, "TSAMP", "%f", &tsamp);
+  ascii_header_get(header, "RA", "%f", &ra);
+  ascii_header_get(header, "DEC", "%f", &dec);
+  ascii_header_get(header, "AZ_START", "%f", &az_start);
+  ascii_header_get(header, "ZA_START", "%f", &za_start);
+  ascii_header_get(header, "MJD_START", "%f", &mjd_start);
+  ascii_header_get(header, "NBIT", "%d", &nbit);
 
   // tell the ringbuffer the header has been read
   if (ipcbuf_mark_cleared(hdu->header_block) < 0) {
@@ -181,26 +196,25 @@ void open_files(char *prefix) {
 
   // 1 page => 1024 microseconds
   // startpacket is in units of 1.28 us since UNIX epoch
-  //
   for (tab=0; tab<ntabs; tab++) {
     char fname[256];
     snprintf(fname, 256, "%s_%02i.fil", prefix, tab + 1);
 
     // open filterbank file
     output[tab] = filterbank_create(
-      fname,     // filename
-      10,        // int telescope_id,
-      15,        // int machine_id,
-      "TODO",    // char *source_name,
-      0.0,       // double az_start,
-      1.0,       // double za_start,
-      2.0,       // double src_raj,
-      3.0,       // double src_dej,
-      0.0,       // double tstart, TODO
-      tsamp,     // double tsamp,
-      8,         // int nbits,
-      min_frequency,          // double fch1,
-      -1 * channel_bandwidth, // double foff,
+      fname,           // filename
+      10,              // int telescope_id,
+      15,              // int machine_id,
+      "TODO",          // char *source_name,
+      az_start,        // double az_start,
+      za_start,        // double za_start,
+      ra,              // double src_raj,
+      dec,             // double src_dej,
+      mjd_start,       // double tstart, TODO
+      tsamp,           // double tsamp,
+      nbit,            // int nbits,
+      min_frequency + bandwidth,  // double fch1,
+      -1 * channel_bandwidth,     // double foff,
       nchannels, // int nchans,
       ntabs,     // int nbeams,
       tab + 1,   // int ibeam, TODO: start at 1?
@@ -258,28 +272,35 @@ int main (int argc, char *argv[]) {
 
   if (science_case == 3) {
     // NTIMES (12500) per 1.024 seconds -> 0.00008192 [s]
-    tsamp = 0.00008192;
     ntimes = 12500;
   } else if (science_case == 4) {
     // NTIMES (25000) per 1.024 seconds -> 0.00004096 [s]
-    tsamp = 0.00004096;
     ntimes = 25000;
   }
-  ntabs = 12; // TODO: depends on science_mode?
 
   LOG("dadafilterbank version: " VERSION "\n");
   LOG("Science case = %i\n", science_case);
-  LOG("Sampling time [s] = %f\n", tsamp);
   LOG("Filename prefix = %s\n", file_prefix);
 
-  // create filterbank files, and close files on C-c
-  open_files(file_prefix);
-  signal(SIGINT, sigint_handler);
+  if (science_mode == 0) {
+    // IAB
+    ntabs = 1;
+    LOG("Science mode: 0 (IAB)\n");
+  } else if (science_mode == 1) {
+    // TAB
+    ntabs = 12;
+    LOG("Science mode: 1 (TAB)\n");
+  }
+
 
   // connect to ring buffer
   dada_hdu_t *ringbuffer = init_ringbuffer(key);
   ipcbuf_t *data_block = (ipcbuf_t *) ringbuffer->data_block;
   ipcio_t *ipc = ringbuffer->data_block;
+
+  // create filterbank files, and close files on C-c
+  open_files(file_prefix);
+  signal(SIGINT, sigint_handler);
 
   // for interaction with ringbuffer
   uint64_t bufsz = ipc->curbufsz;
