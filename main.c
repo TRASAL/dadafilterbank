@@ -34,7 +34,7 @@ unsigned int nchannels;
 float min_frequency;
 float bandwidth;
 float channel_bandwidth;
-float tsamp;
+double tsamp;
 float ra;
 float dec;
 char source_name[256];
@@ -91,7 +91,7 @@ dada_hdu_t *init_ringbuffer(char *key) {
   ascii_header_get(header, "MIN_FREQUENCY", "%f", &min_frequency);
   ascii_header_get(header, "CHANNEL_BANDWIDTH", "%f", &channel_bandwidth);
   ascii_header_get(header, "BW", "%f", &bandwidth);
-  ascii_header_get(header, "TSAMP", "%f", &tsamp);
+  ascii_header_get(header, "TSAMP", "%lf", &tsamp);
   ascii_header_get(header, "RA", "%f", &ra);
   ascii_header_get(header, "DEC", "%f", &dec);
   ascii_header_get(header, "SOURCE", "%s", source_name);
