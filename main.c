@@ -24,7 +24,7 @@
 #include "filterbank.h"
 
 FILE *runlog = NULL;
-#define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout);}
+#define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout); fflush(runlog);}
 
 #define NCHANNELS 1536
 #define MAXTABS 12
@@ -115,7 +115,7 @@ dada_hdu_t *init_ringbuffer(char *key) {
  * Print commandline options
  */
 void printOptions() {
-  printf("usage: dadafilterbank -c <science case> -m <science mode> -k <hexadecimal key> -l <logfile> -s <start packet number> -b <padded_size> -n <filename prefix for dumps>\n");
+  printf("usage: dadafilterbank -c <science case> -m <science mode> -k <hexadecimal key> -l <logfile> -b <padded_size> -n <filename prefix for dumps>\n");
   printf("e.g. dadafits -k dada -l log.txt\n");
   return;
 }
@@ -124,10 +124,10 @@ void printOptions() {
  * Parse commandline
  */
 void parseOptions(int argc, char *argv[],
-    char **key, int *science_case, int *science_mode, unsigned long *startpacket, int *padded_size, char **prefix, char **logfile) {
+    char **key, int *science_case, int *science_mode, int *padded_size, char **prefix, char **logfile) {
   int c;
-  int setk=0, setb=0, setl=0, setc=0, setm=0, sets=0, setn=0;
-  while((c=getopt(argc,argv,"b:c:m:k:l:s:n:"))!=-1) {
+  int setk=0, setb=0, setl=0, setc=0, setm=0, setn=0;
+  while((c=getopt(argc,argv,"b:c:m:k:l:n:"))!=-1) {
     switch(c) {
       // -k <hexadecimal_key>
       case('k'):
@@ -141,7 +141,6 @@ void parseOptions(int argc, char *argv[],
         setb=1;
         break;
 
-
       // -l log file
       case('l'):
         *logfile = strdup(optarg);
@@ -152,26 +151,12 @@ void parseOptions(int argc, char *argv[],
       case('c'):
         setc=1;
         *science_case = atoi(optarg);
-        if (*science_case < 3 || *science_case > 4) {
-          printOptions();
-          exit(0);
-        }
         break;
 
       // -m <science mode>
       case('m'):
         setm=1;
         *science_mode = atoi(optarg);
-        if (*science_mode != 0 && *science_mode != 1) {
-          printOptions();
-          exit(0);
-        }
-        break;
-
-      // -s start packet number
-      case('s'):
-        *startpacket = atol(optarg);
-        sets=1;
         break;
 
       // -n <filename prefix>
@@ -180,23 +165,31 @@ void parseOptions(int argc, char *argv[],
         *prefix = strdup(optarg);
         break;
 
-      default:
+      // -h
+      case('h'):
         printOptions();
-        exit(0);
+        exit(EXIT_SUCCESS);
+        break;
+
+      default:
+        fprintf(stderr, "Unknow option '%c'\n", c);
+        exit(EXIT_FAILURE);
+        break;
     }
   }
 
   // All arguments are required
-  if (!setk || !setl || !setb || !setc || !setm || !sets || !setn) {
-    printOptions();
+  if (!setk || !setl || !setb || !setc || !setm || !setn) {
+    if (!setk) fprintf(stderr, "Error: DADA key not set\n");
+    if (!setl) fprintf(stderr, "Error: Log file not set\n");
+    if (!setc) fprintf(stderr, "Error: Science case not set\n");
+    if (!setm) fprintf(stderr, "Error: Science mode not set\n");
+    if (!setn) fprintf(stderr, "Error: DADA key not set\n");
     exit(EXIT_FAILURE);
   }
 }
 
 void open_files(char *prefix, int ntabs) {
-  // 1 page => 1024 microseconds
-  // startpacket is in units of 1.28 us since UNIX epoch
-
   int tab;
   for (tab=0; tab<ntabs; tab++) {
     char fname[256];
@@ -260,11 +253,10 @@ int main (int argc, char *argv[]) {
   int science_case;
   int science_mode;
   int padded_size;
-  unsigned long startpacket;
   char *file_prefix;
 
   // parse commandline
-  parseOptions(argc, argv, &key, &science_case, &science_mode, &startpacket, &padded_size, &file_prefix, &logfile);
+  parseOptions(argc, argv, &key, &science_case, &science_mode, &padded_size, &file_prefix, &logfile);
 
   // set up logging
   if (logfile) {
@@ -283,22 +275,31 @@ int main (int argc, char *argv[]) {
   } else if (science_case == 4) {
     // NTIMES (25000) per 1.024 seconds -> 0.00004096 [s]
     ntimes = 25000;
+  } else {
+    LOG("Error: Illegal science case '%i'", science_mode);
+    exit(EXIT_FAILURE);
   }
+
 
   LOG("dadafilterbank version: " VERSION "\n");
   LOG("Science case = %i\n", science_case);
   LOG("Filename prefix = %s\n", file_prefix);
 
   if (science_mode == 0) {
-    // IAB
-    ntabs = 1;
-    LOG("Science mode: IAB\n");
-  } else if (science_mode == 1) {
-    // TAB
+    // I + TAB
     ntabs = 12;
-    LOG("Science mode: TAB\n");
+    LOG("Science mode: I + TAB\n");
+  } else if (science_mode == 2) {
+    // I + IAB
+    ntabs = 1;
+    LOG("Science mode: I + IAB\n");
+  } else if (science_mode == 1 || science_mode == 3) {
+    LOG("Error: modes IQUV+TAB / IQUV+IAB not supported");
+    exit(EXIT_FAILURE);
+  } else {
+    LOG("Error: Illegal science mode '%i'", science_mode);
+    exit(EXIT_FAILURE);
   }
-
 
   // connect to ring buffer
   dada_hdu_t *ringbuffer = init_ringbuffer(key);
