@@ -23,27 +23,33 @@
 #include "ascii_header.h"
 #include "filterbank.h"
 
-FILE *runlog = NULL;
-#define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout); fflush(runlog);}
-
-#define NCHANNELS 1536
 #define MAXTABS 12
 int output[MAXTABS];
 
-unsigned int nchannels;
+FILE *runlog = NULL;
+#define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout); fflush(runlog);}
+
+// Hardcoded parameters
+const unsigned int nchannels = 1536;
+const unsigned int nbit = 8;
+
+// Parameters read from ringbuffer header block (with default to lowest data rate)
+int science_case = 3;
+int science_mode = 0;
+int padded_size = 12500;
 double min_frequency;
 double bandwidth;
-double channel_bandwidth;
-double tsamp;
 double ra;
 double dec;
 char source_name[256];
 double az_start;
 double za_start;
 double mjd_start;
-unsigned int nbit;
-int ntimes;
-int ntabs;
+
+// Derived parameters (with default to lowest data rate)
+double tsamp = 1.024 / 12500;
+int ntimes = 12500;
+int ntabs = 1;
 
 /**
  * Open a connection to the ringbuffer
@@ -87,18 +93,17 @@ dada_hdu_t *init_ringbuffer(char *key) {
   }
 
   // parse header
-  ascii_header_get(header, "NCHAN", "%d", &nchannels);
   ascii_header_get(header, "MIN_FREQUENCY", "%lf", &min_frequency);
-  ascii_header_get(header, "CHANNEL_BANDWIDTH", "%lf", &channel_bandwidth);
   ascii_header_get(header, "BW", "%lf", &bandwidth);
-  ascii_header_get(header, "TSAMP", "%lf", &tsamp);
   ascii_header_get(header, "RA", "%lf", &ra);
   ascii_header_get(header, "DEC", "%lf", &dec);
   ascii_header_get(header, "SOURCE", "%s", source_name);
   ascii_header_get(header, "AZ_START", "%lf", &az_start);
   ascii_header_get(header, "ZA_START", "%lf", &za_start);
   ascii_header_get(header, "MJD_START", "%lf", &mjd_start);
-  ascii_header_get(header, "NBIT", "%d", &nbit);
+  ascii_header_get(header, "SCIENCE_CASE", "%i", &science_case);
+  ascii_header_get(header, "SCIENCE_MODE", "%i", &science_mode);
+  ascii_header_get(header, "PADDED_SIZE", "%i", &padded_size);
 
   // tell the ringbuffer the header has been read
   if (ipcbuf_mark_cleared(hdu->header_block) < 0) {
@@ -115,18 +120,17 @@ dada_hdu_t *init_ringbuffer(char *key) {
  * Print commandline options
  */
 void printOptions() {
-  printf("usage: dadafilterbank -c <science case> -m <science mode> -k <hexadecimal key> -l <logfile> -b <padded_size> -n <filename prefix for dumps>\n");
-  printf("e.g. dadafits -k dada -l log.txt\n");
+  printf("usage: dadafilterbank -k <hexadecimal key> -l <logfile> -n <filename prefix for dumps>\n");
+  printf("e.g. dadafits -k dada -l log.txt -n myobs\n");
   return;
 }
 
 /**
  * Parse commandline
  */
-void parseOptions(int argc, char *argv[],
-    char **key, int *science_case, int *science_mode, int *padded_size, char **prefix, char **logfile) {
+void parseOptions(int argc, char *argv[], char **key, char **prefix, char **logfile) {
   int c;
-  int setk=0, setb=0, setl=0, setc=0, setm=0, setn=0;
+  int setk=0, setl=0, setn=0;
   while((c=getopt(argc,argv,"b:c:m:k:l:n:"))!=-1) {
     switch(c) {
       // -k <hexadecimal_key>
@@ -135,28 +139,10 @@ void parseOptions(int argc, char *argv[],
         setk=1;
         break;
 
-      // -b padded_size (bytes)
-      case('b'):
-        *padded_size = atoi(optarg);
-        setb=1;
-        break;
-
       // -l log file
       case('l'):
         *logfile = strdup(optarg);
         setl=1;
-        break;
-
-      // -c <science case>
-      case('c'):
-        setc=1;
-        *science_case = atoi(optarg);
-        break;
-
-      // -m <science mode>
-      case('m'):
-        setm=1;
-        *science_mode = atoi(optarg);
         break;
 
       // -n <filename prefix>
@@ -179,11 +165,9 @@ void parseOptions(int argc, char *argv[],
   }
 
   // All arguments are required
-  if (!setk || !setl || !setb || !setc || !setm || !setn) {
+  if (!setk || !setl || !setn) {
     if (!setk) fprintf(stderr, "Error: DADA key not set\n");
     if (!setl) fprintf(stderr, "Error: Log file not set\n");
-    if (!setc) fprintf(stderr, "Error: Science case not set\n");
-    if (!setm) fprintf(stderr, "Error: Science mode not set\n");
     if (!setn) fprintf(stderr, "Error: DADA key not set\n");
     exit(EXIT_FAILURE);
   }
@@ -202,19 +186,19 @@ void open_files(char *prefix, int ntabs) {
 
     // open filterbank file
     output[tab] = filterbank_create(
-      fname,     // filename
-      10,        // int telescope_id,
-      15,        // int machine_id,
+      fname,       // filename
+      10,          // int telescope_id,
+      15,          // int machine_id,
       source_name, // char *source_name,
-      az_start,       // double az_start,
-      za_start,       // double za_start,
-      ra,       // double src_raj,
-      dec,       // double src_dej,
-      mjd_start,       // double tstart
-      tsamp,     // double tsamp,
-      nbit,         // int nbits,
-      min_frequency + bandwidth - .5 * channel_bandwidth,  // double fch1,
-      -1 * channel_bandwidth, // double foff,
+      az_start,    // double az_start,
+      za_start,    // double za_start,
+      ra,          // double src_raj,
+      dec,         // double src_dej,
+      mjd_start,   // double tstart
+      tsamp,       // double tsamp,
+      nbit,        // int nbits,
+      min_frequency + bandwidth - .5 * bandwidth,  // double fch1,
+      -1 * bandwidth, // double foff,
       nchannels, // int nchans,
       ntabs,     // int nbeams,
       tab + 1,   // int ibeam
@@ -250,13 +234,10 @@ void sigint_handler (int sig) {
 int main (int argc, char *argv[]) {
   char *key;
   char *logfile;
-  int science_case;
-  int science_mode;
-  int padded_size;
   char *file_prefix;
 
   // parse commandline
-  parseOptions(argc, argv, &key, &science_case, &science_mode, &padded_size, &file_prefix, &logfile);
+  parseOptions(argc, argv, &key, &file_prefix, &logfile);
 
   // set up logging
   if (logfile) {
@@ -269,12 +250,19 @@ int main (int argc, char *argv[]) {
     free (logfile);
   }
 
+  // connect to ring buffer
+  dada_hdu_t *ringbuffer = init_ringbuffer(key);
+  ipcbuf_t *data_block = (ipcbuf_t *) ringbuffer->data_block;
+  ipcio_t *ipc = ringbuffer->data_block;
+
   if (science_case == 3) {
     // NTIMES (12500) per 1.024 seconds -> 0.00008192 [s]
     ntimes = 12500;
+    tsamp = 1.024 / 12500;
   } else if (science_case == 4) {
     // NTIMES (25000) per 1.024 seconds -> 0.00004096 [s]
     ntimes = 25000;
+    tsamp = 1.024 / 25000;
   } else {
     LOG("Error: Illegal science case '%i'", science_mode);
     exit(EXIT_FAILURE);
@@ -301,11 +289,6 @@ int main (int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  // connect to ring buffer
-  dada_hdu_t *ringbuffer = init_ringbuffer(key);
-  ipcbuf_t *data_block = (ipcbuf_t *) ringbuffer->data_block;
-  ipcio_t *ipc = ringbuffer->data_block;
-
   // create filterbank files, and close files on C-c
   open_files(file_prefix, ntabs);
   signal(SIGINT, sigint_handler);
@@ -316,7 +299,7 @@ int main (int argc, char *argv[]) {
 
   // for processing a page
   int tab, channel, time;
-  char *buffer = malloc(ntimes * NCHANNELS * sizeof(char));
+  char *buffer = malloc(ntimes * nchannels * sizeof(char));
 
   int page_count = 0;
   int quit = 0;
@@ -326,16 +309,16 @@ int main (int argc, char *argv[]) {
     if (! page) {
       quit = 1;
     } else {
-      // page [NTABS, NCHANNELS, time(padded_size)]
-      // file [time, NCHANNELS]
+      // page [NTABS, nchannels, time(padded_size)]
+      // file [time, nchannels]
       for (tab = 0; tab < ntabs; tab++) {
-        for (channel = 0; channel < NCHANNELS; channel++) {
+        for (channel = 0; channel < nchannels; channel++) {
           for (time = 0; time < ntimes; time++) {
             // reverse freq order to comply with header
-            buffer[time*NCHANNELS+NCHANNELS-channel-1] = page[(tab*NCHANNELS + channel) * padded_size + time];
+            buffer[time*nchannels+nchannels-channel-1] = page[(tab*nchannels + channel) * padded_size + time];
           }
         }
-        write(output[tab], buffer, sizeof(char) * ntimes * NCHANNELS);
+        write(output[tab], buffer, sizeof(char) * ntimes * nchannels);
       }
       ipcbuf_mark_cleared((ipcbuf_t *) ipc);
       page_count++;
