@@ -21,20 +21,20 @@ Command line arguments:
 ## Science modes
 
 The program implements different modes:
-0. Stokes I + IAB (coherent beams, so only one tied array beam)
-2. Stokes I + TAB (12 tied array beams)
+- mode 0: Stokes I + IAB (coherent beams, so only one tied array beam)
+- mode 2: Stokes I + TAB (12 tied array beams)
 
 Not supported modes:
-1. Stokes IQUV + IAB
-3. Stokes IQUV + TAB
+- mode 1: Stokes IQUV + IAB
+- mode 3: Stokes IQUV + TAB
 
 
 ## Science cases
 
 The data rate is set per science case.
 Supported cases:
-3. 12500 samples per second
-4. 25000 samples per second
+- case 3: 12500 samples per second
+- case 4: 25000 samples per second
 
 
 # The ringbuffer
@@ -49,7 +49,6 @@ For values that should be present see the table below.
 |----------|-------------|-------|-------|
 | MIN\_FREQUENCY | lowest frequency                           |                              | |
 | BW             | Bandwidth of a frequency channel           |                              | |
-| TSAMP          | sampling time                              | Must match science case      | |
 | RA             |                                            |                              | |
 | DEC            |                                            |                              | |
 | SOURCE         |                                            |                              | |
