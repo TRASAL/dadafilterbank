@@ -35,7 +35,7 @@ const unsigned int nbit = 8;
 
 // Parameters read from ringbuffer header block (with default to lowest data rate)
 int science_case = 3;
-int science_mode = 0;
+int science_mode = 2;
 int padded_size = 12500;
 double min_frequency;
 double bandwidth;

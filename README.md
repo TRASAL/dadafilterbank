@@ -21,12 +21,12 @@ Command line arguments:
 ## Science modes
 
 The program implements different modes:
-- mode 0: Stokes I + IAB (coherent beams, so only one tied array beam)
-- mode 2: Stokes I + TAB (12 tied array beams)
+- mode 0: Stokes I + TAB (12 tied array beams)
+- mode 2: Stokes I + IAB (coherent beams, so only one tied array beam)
 
 Not supported modes:
-- mode 1: Stokes IQUV + IAB
-- mode 3: Stokes IQUV + TAB
+- mode 1: Stokes IQUV + TAB
+- mode 3: Stokes IQUV + IAB
 
 
 ## Science cases
