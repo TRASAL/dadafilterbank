@@ -47,8 +47,8 @@ For values that should be present see the table below.
 
 |header key| description | notes | units |
 |----------|-------------|-------|-------|
-| MIN\_FREQUENCY | lowest frequency                           |                              | |
-| BW             | Bandwidth of a frequency channel           |                              | |
+| MIN\_FREQUENCY | Center of lowest frequency band            |                              | |
+| BW             | Total bandwidth of the observation         |                              | |
 | RA             |                                            |                              | |
 | DEC            |                                            |                              | |
 | SOURCE         |                                            |                              | |

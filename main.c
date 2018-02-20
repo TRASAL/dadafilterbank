@@ -197,8 +197,8 @@ void open_files(char *prefix, int ntabs) {
       mjd_start,   // double tstart
       tsamp,       // double tsamp,
       nbit,        // int nbits,
-      min_frequency + bandwidth - .5 * bandwidth,  // double fch1,
-      -1 * bandwidth, // double foff,
+      min_frequency,  // double fch1,
+      -1 * bandwidth / nchannels, // double foff,
       nchannels, // int nchans,
       ntabs,     // int nbeams,
       tab + 1,   // int ibeam
