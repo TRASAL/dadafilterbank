@@ -59,6 +59,7 @@ int ntabs = 1;
  */
 dada_hdu_t *init_ringbuffer(char *key) {
   uint64_t nbufs;
+  int header_incomplete = 0;
 
   multilog_t* multilog = NULL; // TODO: See if this is used in anyway by dada
 
@@ -93,17 +94,50 @@ dada_hdu_t *init_ringbuffer(char *key) {
   }
 
   // parse header
-  ascii_header_get(header, "MIN_FREQUENCY", "%lf", &min_frequency);
-  ascii_header_get(header, "BW", "%lf", &bandwidth);
-  ascii_header_get(header, "RA", "%lf", &ra);
-  ascii_header_get(header, "DEC", "%lf", &dec);
-  ascii_header_get(header, "SOURCE", "%s", source_name);
-  ascii_header_get(header, "AZ_START", "%lf", &az_start);
-  ascii_header_get(header, "ZA_START", "%lf", &za_start);
-  ascii_header_get(header, "MJD_START", "%lf", &mjd_start);
-  ascii_header_get(header, "SCIENCE_CASE", "%i", &science_case);
-  ascii_header_get(header, "SCIENCE_MODE", "%i", &science_mode);
-  ascii_header_get(header, "PADDED_SIZE", "%i", &padded_size);
+  if(ascii_header_get(header, "MIN_FREQUENCY", "%lf", &min_frequency) == -1) {
+    LOG("ERROR. MIN_FREQUENCY not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "BW", "%lf", &bandwidth) == -1) {
+    LOG("ERROR. BW not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "RA", "%lf", &ra) == -1) {
+    LOG("ERROR. RA not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "DEC", "%lf", &dec) == -1) {
+    LOG("ERROR. DEC not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "SOURCE", "%s", source_name) == -1) {
+    LOG("ERROR. SOURCE not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "AZ_START", "%lf", &az_start) == -1) {
+    LOG("ERROR. AZ_START not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "ZA_START", "%lf", &za_start) == -1) {
+    LOG("ERROR. ZA_START not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "MJD_START", "%lf", &mjd_start) == -1) {
+    LOG("ERROR. MJD_START not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "SCIENCE_CASE", "%i", &science_case) == -1) {
+    LOG("ERROR. SCIENCE_CASE not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "SCIENCE_MODE", "%i", &science_mode) == -1) {
+    LOG("ERROR. SCIENCE_MODE not set in dada buffer\n");
+    header_incomplete = 1;
+  }
+  if(ascii_header_get(header, "PADDED_SIZE", "%i", &padded_size) == -1) {
+    LOG("ERROR. PADDED_SIZE not set in dada buffer\n");
+    header_incomplete = 1;
+  }
 
   // tell the ringbuffer the header has been read
   if (ipcbuf_mark_cleared(hdu->header_block) < 0) {
@@ -112,6 +146,9 @@ dada_hdu_t *init_ringbuffer(char *key) {
   }
 
   LOG("psrdada HEADER:\n%s\n", header);
+  if (header_incomplete) {
+    exit(EXIT_FAILURE);
+  }
 
   return hdu;
 }
@@ -276,13 +313,13 @@ int main (int argc, char *argv[]) {
   if (science_mode == 0) {
     // I + TAB
     ntabs = 12;
-    LOG("Science mode: I + TAB\n");
+    LOG("Science mode: 0 [I + TAB]\n");
   } else if (science_mode == 2) {
     // I + IAB
     ntabs = 1;
-    LOG("Science mode: I + IAB\n");
+    LOG("Science mode: 2 [I + IAB]\n");
   } else if (science_mode == 1 || science_mode == 3) {
-    LOG("Error: modes IQUV+TAB / IQUV+IAB not supported");
+    LOG("Error: modes 1 [IQUV + TAB] / 3 [IQUV + IAB] not supported");
     exit(EXIT_FAILURE);
   } else {
     LOG("Error: Illegal science mode '%i'", science_mode);
