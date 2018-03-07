@@ -195,7 +195,7 @@ void parseOptions(int argc, char *argv[], char **key, char **prefix, char **logf
         break;
 
       default:
-        fprintf(stderr, "Unknow option '%c'\n", c);
+        fprintf(stderr, "Unknown option '%c'\n", c);
         exit(EXIT_FAILURE);
         break;
     }
@@ -205,7 +205,7 @@ void parseOptions(int argc, char *argv[], char **key, char **prefix, char **logf
   if (!setk || !setl || !setn) {
     if (!setk) fprintf(stderr, "Error: DADA key not set\n");
     if (!setl) fprintf(stderr, "Error: Log file not set\n");
-    if (!setn) fprintf(stderr, "Error: DADA key not set\n");
+    if (!setn) fprintf(stderr, "Error: Filename prefix not set\n");
     exit(EXIT_FAILURE);
   }
 }
