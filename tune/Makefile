@@ -6,4 +6,5 @@ all: $(TARGETS)
 	gcc -march=native -O3 -Ofast -fstrict-aliasing -fopenmp -o $@ -std=c99 main.c $<
 
 time:
+	export OMP_NUM_THREADS=2
 	for i in $(TARGETS); do echo -n $$i && ./$$i 12 1536 25000 25088; done
