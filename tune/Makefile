@@ -1,4 +1,4 @@
-TARGETS=loopct loopct_r2 loopct_r4 looptc looptc_c1 looptc_c2 looptc_c4
+TARGETS=loopct loopct_r2 loopct_r4 loopct_r6 looptc looptc_c1 looptc_c2 looptc_c4 looptc_c6
 
 all: $(TARGETS)
 
