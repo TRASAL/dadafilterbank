@@ -336,7 +336,7 @@ int main (int argc, char *argv[]) {
 
   // for processing a page
   int tab, channel, time;
-  char *buffer = malloc(ntimes * nchannels * sizeof(char));
+  char *buffer = malloc(ntabs * ntimes * nchannels * sizeof(char));
 
   int page_count = 0;
   int quit = 0;
@@ -364,15 +364,15 @@ int main (int argc, char *argv[]) {
           for (time = 0; time < ntimes; time++) {
 
             // reverse freq order to comply with header
-            buffer[time*nchannels+nchannels-(channel+0)-1] = channelA[time];
-            buffer[time*nchannels+nchannels-(channel+1)-1] = channelB[time];
-            buffer[time*nchannels+nchannels-(channel+2)-1] = channelC[time];
-            buffer[time*nchannels+nchannels-(channel+3)-1] = channelD[time];
-            buffer[time*nchannels+nchannels-(channel+4)-1] = channelE[time];
-            buffer[time*nchannels+nchannels-(channel+5)-1] = channelF[time];
+            buffer[tab*ntimes*nchannels + time*nchannels+nchannels-(channel+0)-1] = channelA[time];
+            buffer[tab*ntimes*nchannels + time*nchannels+nchannels-(channel+1)-1] = channelB[time];
+            buffer[tab*ntimes*nchannels + time*nchannels+nchannels-(channel+2)-1] = channelC[time];
+            buffer[tab*ntimes*nchannels + time*nchannels+nchannels-(channel+3)-1] = channelD[time];
+            buffer[tab*ntimes*nchannels + time*nchannels+nchannels-(channel+4)-1] = channelE[time];
+            buffer[tab*ntimes*nchannels + time*nchannels+nchannels-(channel+5)-1] = channelF[time];
           }
         }
-        write(output[tab], buffer, sizeof(char) * ntimes * nchannels);
+        write(output[tab], &buffer[tab*ntimes*nchannels], sizeof(char) * ntimes * nchannels);
       }
       ipcbuf_mark_cleared((ipcbuf_t *) ipc);
       page_count++;
