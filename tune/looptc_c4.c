@@ -22,7 +22,7 @@ void deinterleave(char *page, char *transposed, const int ntabs, const int nchan
       }
 
       // copy 4 full row at once
-      memcpy(&transposed[time*nchannels], temp, 2*nchannels);
+      memcpy(&transposed[time*nchannels], temp, 4*nchannels);
     }
   }
 }
