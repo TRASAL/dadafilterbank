@@ -30,7 +30,7 @@ FILE *runlog = NULL;
 #define LOG(...) {fprintf(stdout, __VA_ARGS__); fprintf(runlog, __VA_ARGS__); fflush(stdout); fflush(runlog);}
 
 // Hardcoded parameters
-const unsigned int nchannels = 1536;
+const unsigned int nchannels = 1536; // Must be divisible by 6 for the current transpose/inverse implementation
 const unsigned int nbit = 8;
 
 // Parameters read from ringbuffer header block (with default to lowest data rate)
@@ -349,10 +349,27 @@ int main (int argc, char *argv[]) {
       // page [NTABS, nchannels, time(padded_size)]
       // file [time, nchannels]
       for (tab = 0; tab < ntabs; tab++) {
-        for (channel = 0; channel < nchannels; channel++) {
+
+        int channel;
+#pragma omp parallel for
+        for (channel = 0; channel < nchannels; channel+=6) {
+          const char *channelA = &page[(tab*nchannels + channel + 0)*padded_size];
+          const char *channelB = &page[(tab*nchannels + channel + 1)*padded_size];
+          const char *channelC = &page[(tab*nchannels + channel + 2)*padded_size];
+          const char *channelD = &page[(tab*nchannels + channel + 3)*padded_size];
+          const char *channelE = &page[(tab*nchannels + channel + 4)*padded_size];
+          const char *channelF = &page[(tab*nchannels + channel + 5)*padded_size];
+
+          int time;
           for (time = 0; time < ntimes; time++) {
+
             // reverse freq order to comply with header
-            buffer[time*nchannels+nchannels-channel-1] = page[(tab*nchannels + channel) * padded_size + time];
+            buffer[time*nchannels+nchannels-(channel+0)-1] = channelA[time];
+            buffer[time*nchannels+nchannels-(channel+1)-1] = channelB[time];
+            buffer[time*nchannels+nchannels-(channel+2)-1] = channelC[time];
+            buffer[time*nchannels+nchannels-(channel+3)-1] = channelD[time];
+            buffer[time*nchannels+nchannels-(channel+4)-1] = channelE[time];
+            buffer[time*nchannels+nchannels-(channel+5)-1] = channelF[time];
           }
         }
         write(output[tab], buffer, sizeof(char) * ntimes * nchannels);

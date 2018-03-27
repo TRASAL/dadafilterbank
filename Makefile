@@ -6,7 +6,7 @@ VERSION := $(shell git rev-parse HEAD )
 # http://psrdada.sourceforge.net/
 PSRDADA  ?= $(SOURCE_ROOT)/src/psrdada
 
-OPTIMIZATION := -Ofast -march=native
+OPTIMIZATION := -Ofast -march=native -fstrict-aliasing -fopenmp
 
 INCLUDES := -I"$(PSRDADA)/src/"
 DADA_DEPS := $(PSRDADA)/src/dada_hdu.o $(PSRDADA)/src/ipcbuf.o $(PSRDADA)/src/ipcio.o $(PSRDADA)/src/ipcutil.o $(PSRDADA)/src/ascii_header.o $(PSRDADA)/src/multilog.o $(PSRDADA)/src/tmutil.o $(PSRDADA)/src/fileread.o $(PSRDADA)/src/filesize.o

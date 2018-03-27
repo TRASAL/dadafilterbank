@@ -86,6 +86,24 @@ Building is then done using the Makefile:
   make
 ```
 
+# Performance
+
+Altough the program is relatively simple, the large arrays can cause performance issues wrt. caching.
+The matrix transpose and inversion of the channel dimension takes longer than realtime using a naive implementation on the ARTS cluster.
+
+In the *tune* subdirectory there are several implementations trying out different loop order and various levels of loop unrolling.
+It also adds openMP, with the number of threads specified in the Makefile.
+As a final step, you should pin the executable to a specific core using taskset.
+
+To try them run:
+```bash
+  cd tune
+  make all
+  make time
+```
+
+For science 4 on the ARTS cluster, the *loopct_r6* implementation was fastest (using 2 to 4 threads); this is current implementation.
+
 # Contributers
 
 Jisk Attema, Netherlands eScience Center
