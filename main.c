@@ -22,6 +22,7 @@
 #include "dada_hdu.h"
 #include "ascii_header.h"
 #include "filterbank.h"
+#include "config.h"
 
 #define MAXTABS 12
 int output[MAXTABS];

@@ -1,9 +1,27 @@
 # dadafilterbank
 
-Connect to a [PSRdada](http://psrdada.sourceforge.net/) ringbuffer and write out the data in [filterbank](http://sigproc.sourceforge.net/) format.
+Connect to a [PSRdada](http://psrdada.sourceforge.net/) ringbuffer and write out the data
+in [filterbank](http://sigproc.sourceforge.net/) format.
 
 This program is part of the data handling pipeline for the AA-ALERT project.
 See [dadatrigger](https://github.com/AA-ALERT/dadatrigger) for an introduction and dataflow schema.
+
+# Installation
+
+Requirements:
+ * Cmake
+ * Cuda 
+ * Psrdada
+ 
+ Instructions:
+ 
+```
+$ mkdir build && cd build
+$ cmake ..
+$ make
+$ make install
+
+```
 
 # Usage
 
