@@ -37,8 +37,9 @@
 
 static void put_raw_string(int fd, char *string) {
   int len = strlen(string);
-  write(fd, &len, sizeof(int));
-  write(fd, string, sizeof(char) * len);
+  ssize_t size;
+  size = write(fd, &len, sizeof(int));
+  size = write(fd, string, sizeof(char) * len);
 }
 
 static void put_string(int fd, char *name, char *value) {
@@ -48,12 +49,12 @@ static void put_string(int fd, char *name, char *value) {
 
 static void put_double(int fd, char *name, double value) {
   put_raw_string(fd, name);
-  write(fd, &value, sizeof(double));
+  ssize_t size = write(fd, &value, sizeof(double));
 }
 
 static void put_int(int fd, char *name, int value) {
   put_raw_string(fd, name);
-  write(fd, &value, sizeof(int));
+  ssize_t size = write(fd, &value, sizeof(int));
 }
 
 void filterbank_close(int fd) {

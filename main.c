@@ -373,7 +373,7 @@ int main (int argc, char *argv[]) {
             buffer[tab*ntimes*nchannels + time*nchannels+nchannels-(channel+5)-1] = channelF[time];
           }
         }
-        write(output[tab], &buffer[tab*ntimes*nchannels], sizeof(char) * ntimes * nchannels);
+        ssize_t size = write(output[tab], &buffer[tab*ntimes*nchannels], sizeof(char) * ntimes * nchannels);
       }
       ipcbuf_mark_cleared((ipcbuf_t *) ipc);
       page_count++;
