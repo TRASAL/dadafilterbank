@@ -26,3 +26,5 @@ set(SOURCES
 add_executable(filterbank ${SOURCES} ${HEADERS})
 
 target_link_libraries(filterbank ${PSRDADA_LIBRARIES} ${CUDA_LIBRARIES})
+
+install(TARGETS filterbank RUNTIME DESTINATION bin)
