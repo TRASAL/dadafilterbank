@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 
 project(dadafilterbank C)
 
-set(CMAKE_C_FLAGS_RELEASE "-O3") 
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native") 
 
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
