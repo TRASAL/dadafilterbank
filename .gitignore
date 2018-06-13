@@ -9,3 +9,5 @@ tune/looptc_c1
 tune/looptc_c2
 tune/looptc_c4
 tune/looptc_c6
+cmake-build-debug/
+build/

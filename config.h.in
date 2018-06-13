@@ -1,0 +1,3 @@
+#define VERSION_MAJOR @dadafilterbank_VERSION_MAJOR@
+#define VERSION_MINOR @dadafilterbank_VERSION_MINOR@
+#define VERSION "@dadafilterbank_VERSION_MAJOR@.@dadafilterbank_VERSION_MINOR@"
