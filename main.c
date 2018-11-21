@@ -298,9 +298,9 @@ int main (int argc, char *argv[]) {
     ntimes = 12500;
     tsamp = 1.024 / 12500;
   } else if (science_case == 4) {
-    // NTIMES (25000) per 1.024 seconds -> 0.00004096 [s]
-    ntimes = 25000;
-    tsamp = 1.024 / 25000;
+    // NTIMES (12500) per 1.024 seconds -> 0.00008192 [s]
+    ntimes = 12500;
+    tsamp = 1.024 / 12500;
   } else {
     LOG("Error: Illegal science case '%i'", science_mode);
     exit(EXIT_FAILURE);
