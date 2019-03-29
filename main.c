@@ -219,7 +219,7 @@ void open_files(char *prefix, int ntabs) {
       snprintf(fname, 256, "%s.fil", prefix);
     }
     else {
-      snprintf(fname, 256, "%s_%02i.fil", prefix, tab + 1);
+      snprintf(fname, 256, "%s_%02i.fil", prefix, tab);
     }
 
     // open filterbank file
@@ -239,7 +239,7 @@ void open_files(char *prefix, int ntabs) {
       -1 * bandwidth / nchannels, // double foff,
       nchannels, // int nchans,
       ntabs,     // int nbeams,
-      tab + 1,   // int ibeam
+      tab,   // int ibeam
       1          // int nifs
     );
   }
