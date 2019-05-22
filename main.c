@@ -219,7 +219,7 @@ void open_files(char *prefix, int ntabs) {
       snprintf(fname, 256, "%s.fil", prefix);
     }
     else {
-      snprintf(fname, 256, "%s_%02i.fil", prefix, tab + 1);
+      snprintf(fname, 256, "%s_%02i.fil", prefix, tab);
     }
 
     // open filterbank file
@@ -239,7 +239,7 @@ void open_files(char *prefix, int ntabs) {
       -1 * bandwidth / nchannels, // double foff,
       nchannels, // int nchans,
       ntabs,     // int nbeams,
-      tab + 1,   // int ibeam
+      tab,   // int ibeam
       1          // int nifs
     );
   }
@@ -298,9 +298,9 @@ int main (int argc, char *argv[]) {
     ntimes = 12500;
     tsamp = 1.024 / 12500;
   } else if (science_case == 4) {
-    // NTIMES (25000) per 1.024 seconds -> 0.00004096 [s]
-    ntimes = 25000;
-    tsamp = 1.024 / 25000;
+    // NTIMES (12500) per 1.024 seconds -> 0.00008192 [s]
+    ntimes = 12500;
+    tsamp = 1.024 / 12500;
   } else {
     LOG("Error: Illegal science case '%i'", science_mode);
     exit(EXIT_FAILURE);
