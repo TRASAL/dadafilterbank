@@ -85,7 +85,7 @@ int filterbank_create(
   put_int(fd, "telescope_id", telescope_id);
   put_int(fd, "machine_id", machine_id);
   put_int(fd, "data_type", 1); // 1: filterbank data, 2: time series dada, DM=0
-  put_string(fd, "rawdatafile", file_name);
+  //put_string(fd, "rawdatafile", file_name); // can be longer than 80 characters, which several readers  cannot handle. filterbank file is valid without this field
   put_string(fd, "source_name", source_name);
   put_int(fd, "barycentric", 0); // 0: no, 1: yes
   put_int(fd, "pulsarcentric", 0); // 0: no, 1: yes
