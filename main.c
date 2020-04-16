@@ -297,10 +297,12 @@ int main (int argc, char *argv[]) {
     // NTIMES (12500) per 1.024 seconds -> 0.00008192 [s]
     ntimes = 12500;
     tsamp = 1.024 / 12500;
+    ntabs = 9;
   } else if (science_case == 4) {
     // NTIMES (12500) per 1.024 seconds -> 0.00008192 [s]
     ntimes = 12500;
     tsamp = 1.024 / 12500;
+    ntabs = 12;
   } else {
     LOG("Error: Illegal science case '%i'", science_mode);
     exit(EXIT_FAILURE);
@@ -313,10 +315,10 @@ int main (int argc, char *argv[]) {
 
   if (science_mode == 0) {
     // I + TAB
-    ntabs = 12;
     LOG("Science mode: 0 [I + TAB]\n");
   } else if (science_mode == 2) {
     // I + IAB
+    // Overwrite NTABS to be one
     ntabs = 1;
     LOG("Science mode: 2 [I + IAB]\n");
   } else if (science_mode == 1 || science_mode == 3) {
