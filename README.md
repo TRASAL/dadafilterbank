@@ -53,7 +53,7 @@ Not supported modes:
 The data rate is set per science case.
 Supported cases:
 - case 3: 12500 samples per second, 9 beams.
-- case 4: 25000 samples per second, 12 beams.
+- case 4: 12500 samples per second, 12 beams.
 
 
 # The ringbuffer
@@ -111,7 +111,7 @@ To try them run:
   make time
 ```
 
-For science 4 on the ARTS cluster, the *loopct_r6* implementation was fastest (using 2 to 4 threads); this is current implementation.
+For science case 4 on the ARTS cluster, the *loopct_r6* implementation was fastest (using 2 to 4 threads); this is current implementation.
 
 # Contributers
 
