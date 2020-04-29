@@ -95,17 +95,6 @@ Filterbank file names are derived from the file name prefix (*-n* option).
 
 To prevent issues with relative paths etc., please use fully resolved absolute paths (starting with a '/').
 
-# Building
-
-To connect to the PSRDada ring buffer, we depend on some object files that can be obtained when compiling PSRDada.
-The location of these files is assumed to be in the **PSRDADA** directory.
-Alternatively, set **SOURCE\_ROOT** such that the files are in **SOURCE\_ROOT/src/psrdada**.
-
-Building is then done using the Makefile:
-```bash
-  make
-```
-
 # Performance
 
 Altough the program is relatively simple, the large arrays can cause performance issues wrt. caching.
