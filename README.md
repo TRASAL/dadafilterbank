@@ -115,8 +115,9 @@ For science case 4 on the ARTS cluster, the *loopct_r6* implementation was faste
 
 # Contributers
 
-Jisk Attema, Netherlands eScience Center
-Leon Oostrum, UvA
+Jisk Attema, Netherlands eScience Center  
+Leon Oostrum, UvA  
+Gijs Molenaar, Pythonic.nl
 
 # NOTES
 
