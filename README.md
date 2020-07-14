@@ -1,5 +1,7 @@
 # dadafilterbank
 
+[![DOI](https://zenodo.org/badge/94884097.svg)](https://zenodo.org/badge/latestdoi/94884097)
+
 Connect to a [PSRdada](http://psrdada.sourceforge.net/) ringbuffer and write out the data
 in [filterbank](http://sigproc.sourceforge.net/) format.
 
