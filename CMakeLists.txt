@@ -10,8 +10,8 @@ find_package (psrdada REQUIRED)
 find_package (CUDA REQUIRED)
 
 # expose some variables to the source code
-set (dadafilterbank_VERSION_MAJOR 0)
-set (dadafilterbank_VERSION_MINOR 1)
+set (dadafilterbank_VERSION_MAJOR 1)
+set (dadafilterbank_VERSION_MINOR 0)
 configure_file ("config.h.in" "${PROJECT_BINARY_DIR}/config.h")
 include_directories ("${PROJECT_BINARY_DIR}")
 

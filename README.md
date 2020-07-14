@@ -10,8 +10,9 @@ See [dadatrigger](https://github.com/AA-ALERT/dadatrigger) for an introduction a
 
 Requirements:
  * Cmake
- * Cuda 
  * Psrdada
+
+Note that psrdada could add an additional dependency on CUDA.
  
  Instructions:
  
@@ -39,7 +40,7 @@ Command line arguments:
 ## Science modes
 
 The program implements different modes:
-- mode 0: Stokes I + TAB (12 tied array beams)
+- mode 0: Stokes I + TAB (multiple beams)
 - mode 2: Stokes I + IAB (coherent beams, so only one tied array beam)
 
 Not supported modes:
@@ -51,8 +52,8 @@ Not supported modes:
 
 The data rate is set per science case.
 Supported cases:
-- case 3: 12500 samples per second
-- case 4: 25000 samples per second
+- case 3: 12500 samples per second, 9 beams.
+- case 4: 12500 samples per second, 12 beams.
 
 
 # The ringbuffer
@@ -63,19 +64,20 @@ Metadata is read from the PSRdada header block.
 Note that some of the metadata available in the header block is ignored, due to code constraints and optimizations.
 For values that should be present see the table below.
 
-|header key| description | notes | units |
-|----------|-------------|-------|-------|
-| MIN\_FREQUENCY | Center of lowest frequency band            |                              | MHz |
-| BW             | Total bandwidth of the observation         |                              | MHz |
-| RA             |                                            |                              | |
-| DEC            |                                            |                              | |
-| SOURCE         |                                            |                              | |
-| AZ\_START      |                                            |                              | |
-| ZA\_START      |                                            |                              | |
-| MJD\_START     |                                            |                              | |
-| PADDED\_SIZE   | Length of the fastest dimension of the data array |                       | |
-| SCIENCE\_CASE  | Mode of operation of ARTS, determines data rate   |                       | |
-| SCIENCE\_MODE  | Mode of operation of ARTS, determines data layout |                       | |
+|header key      | type   | units            | description                                       | notes |
+|----------------|--------|------------------|---------------------------------------------------|-------|
+| MIN\_FREQUENCY | double | MHz              | Center of lowest frequency band                   |       |
+| BW             | double | MHz              | Total bandwidth of the observation                |       |
+| RA             | double | hhmmss.s         | Right ascension                                   |       |
+| DEC            | double | ddmmss.s         | Declination                                       |       |
+| SOURCE         | string | text             | Source name                                       |       |
+| AZ\_START      | double | degrees          | Azimuth angle of telescope                        |       |
+| ZA\_START      | double | degrees          | Zenith angle of telescope                         |       |
+| MJD\_START     | double | days since epoch | Modified Julian Date                              |       |
+| PADDED\_SIZE   | int    | bytes            | Length of the fastest dimension of the data array |       |
+| SCIENCE\_CASE  | int    | 1                | Mode of operation of ARTS, determines data rate   |       |
+| SCIENCE\_MODE  | int    | 1                | Mode of operation of ARTS, determines data layout |       |
+
 
 ## Data block
 
@@ -93,17 +95,6 @@ Filterbank file names are derived from the file name prefix (*-n* option).
 
 To prevent issues with relative paths etc., please use fully resolved absolute paths (starting with a '/').
 
-# Building
-
-To connect to the PSRDada ring buffer, we depend on some object files that can be obtained when compiling PSRDada.
-The location of these files is assumed to be in the **PSRDADA** directory.
-Alternatively, set **SOURCE\_ROOT** such that the files are in **SOURCE\_ROOT/src/psrdada**.
-
-Building is then done using the Makefile:
-```bash
-  make
-```
-
 # Performance
 
 Altough the program is relatively simple, the large arrays can cause performance issues wrt. caching.
@@ -120,12 +111,13 @@ To try them run:
   make time
 ```
 
-For science 4 on the ARTS cluster, the *loopct_r6* implementation was fastest (using 2 to 4 threads); this is current implementation.
+For science case 4 on the ARTS cluster, the *loopct_r6* implementation was fastest (using 2 to 4 threads); this is current implementation.
 
 # Contributers
 
-Jisk Attema, Netherlands eScience Center
-Leon Oostrum, UvA
+Jisk Attema, Netherlands eScience Center  
+Leon Oostrum, UvA  
+Gijs Molenaar, Pythonic.nl
 
 # NOTES
 
